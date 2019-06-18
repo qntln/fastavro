@@ -56,7 +56,7 @@ if not hasattr(sys, 'pypy_version_info'):
     setup_requires += cpython_requires
 
 setup(
-    name='fastavro',
+    name='ql-fastavro',
     version=version(),
     description='Fast read/write of AVRO files',
     long_description=open('README.md').read(),
