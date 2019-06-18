@@ -390,11 +390,23 @@ cdef read_map(fo, writer_schema, reader_schema=None, return_record_name=False):
     return read_items
 
 
+class DictWrapper(dict):
+    '''
+    This is used only in read_union to be able
+    to add `schema` attribute to a dict.
+    '''
+
+
 cdef read_union(fo, writer_schema, reader_schema=None, return_record_name=False):
     """A union is encoded by first writing a long value indicating the
     zero-based position within the union of the schema of its value.
 
     The value is then encoded per the indicated schema within the union.
+
+    Read union function adapted from fastavro with only one difference.
+    It adds used schema to `schema` attribute if the read data are dict.
+    Using this we will know what schema was read from union because otherwise
+    we can only guess according to data it contains.
     """
     # schema resolution
     index = read_long(fo)
@@ -412,11 +424,12 @@ cdef read_union(fo, writer_schema, reader_schema=None, return_record_name=False)
         msg = 'schema mismatch: %s not found in %s' % (writer_schema, reader_schema)
         raise SchemaResolutionError(msg)
     else:
+        result = _read_data(fo, writer_schema[index], None, return_record_name)
+        if isinstance(result, dict):
+            result = DictWrapper(result)
+            result.schema = writer_schema[index]
         if return_record_name and extract_record_type(writer_schema[index]) == 'record':
-            result = (writer_schema[index]['name'],
-                      _read_data(fo, writer_schema[index], None, return_record_name))
-        else:
-            result = _read_data(fo, writer_schema[index], None, return_record_name)
+            result = (writer_schema[index]['name'], result)
 
     return result
 
